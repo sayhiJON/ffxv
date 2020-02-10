@@ -75,13 +75,15 @@ namespace ffxv_earc.Structures {
             XvEntryHeader header = ReadHeader(reader);
 
             if ((header.Flags & XvEntryHeaderFlags.SafeHeader) != XvEntryHeaderFlags.SafeHeader)
-                throw new InvalidDataException("ENCRYPTED FLAG SET BUT WRONG DESERIALIZE CALLED");
+                throw new InvalidDataException("SAFE HEADER FLAG NOT SET BUT WRONG DESERIALIZE CALLED");
 
             return header;
         }
 
         public static XvEntryHeader Deserialize(BinaryReader reader, ulong key) {
+            //* get the basic entry information
             XvEntryHeader header = ReadHeader(reader);
+            //* set the key incase it's not updated
             header.OffsetDataKey = key;
 
             //* if the archive encrypts the meta data, decrypt it
