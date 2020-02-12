@@ -8,4 +8,10 @@
     <Folder Include="Properties\" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Reference Include="Joveler.ZLibWrapper">
+      <HintPath>..\..\..\ffxvearc\earc3\bin\Debug\Joveler.ZLibWrapper.dll</HintPath>
+    </Reference>
+  </ItemGroup>
+
 </Project>

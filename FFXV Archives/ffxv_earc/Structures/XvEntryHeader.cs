@@ -133,8 +133,8 @@ namespace ffxv_earc.Structures {
             //* if the archive encrypts the meta data, decrypt it
             //* thanks to daxxy
             if ((header.Flags & XvEntryHeaderFlags.SafeHeader) != XvEntryHeaderFlags.SafeHeader) {
-                ulong   fileSizeKey     = (key * XvArchive.MasterFileKey) ^ header.Hash,
-                        dataOffsetKey   = (fileSizeKey * XvArchive.MasterFileKey) ^ ~(header.Hash);
+                ulong   fileSizeKey     = (key * XvArchive.ENTRY_KEY) ^ header.Hash,
+                        dataOffsetKey   = (fileSizeKey * XvArchive.ENTRY_KEY) ^ ~(header.Hash);
 
                 uint    uncompressedKey = (uint)(fileSizeKey >> 32),
                         compressedKey   = (uint)(fileSizeKey & 0xFFFFFFFF);
