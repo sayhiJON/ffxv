@@ -9,11 +9,11 @@ using Joveler.ZLibWrapper;
 
 namespace ffxv_earc {
     public class XvArchive {
-        internal const ulong    PRIMARY_KEY = 0xCBF29CE484222325,
-                                SECONDARY_KEY = 0x40D4CCA269811DAF,
-                                ENTRY_HASH = 0x14650FB0739D0383,
-                                ENTRY_KEY = 0x100000001B3,
-                                PRIMARY_CHUNK_KEY = 0x10E64D70C2A29A69,
+        internal const ulong    PRIMARY_KEY         = 0xCBF29CE484222325,
+                                SECONDARY_KEY       = 0x40D4CCA269811DAF,
+                                ENTRY_HASH          = 0x14650FB0739D0383,
+                                ENTRY_KEY           = 0x100000001B3,
+                                PRIMARY_CHUNK_KEY   = 0x10E64D70C2A29A69,
                                 SECONDARY_CHUNK_KEY = 0xC63D3dC167E;
 
         /// <summary>
@@ -78,10 +78,10 @@ namespace ffxv_earc {
         private ulong p_MasterKey = PRIMARY_KEY;
 
         /// <summary>
-        /// Extracts the data of the entry at the specified index to memory.
+        /// Extracts the data of the <see cref="XvEntryHeader"/> at the specified index to memory.
         /// </summary>
-        /// <param name="entryIndex">Index of the entry to be extracted.</param>
-        /// <returns>A byte array containing the file data of the entry.</returns>
+        /// <param name="entryIndex">Index of the <see cref="XvEntryHeader"/> to be extracted.</param>
+        /// <returns>A byte array containing the file data of the <see cref="XvEntryHeader"/>.</returns>
         public byte[] ExtractToArray(int entryIndex) {
             if (entryIndex >= this.Entries.Count)
                 throw new IndexOutOfRangeException();
@@ -90,10 +90,10 @@ namespace ffxv_earc {
         }
 
         /// <summary>
-        /// Extracts the data of the specified entry to memory.
+        /// Extracts the data of the specified <see cref="XvEntryHeader"/> to memory.
         /// </summary>
-        /// <param name="entry">Entry to be extracted.</param>
-        /// <returns>A byte array containing the file data of the entry.</returns>
+        /// <param name="entry"><see cref="XvEntryHeader"/> to be extracted.</param>
+        /// <returns>A byte array containing the file data of the <see cref="XvEntryHeader"/>. A zero filled array with size 1 means no data.</returns>
         public byte[] ExtractToArray(XvEntryHeader entry) {
             //* make sure the archive still exists for whatever reason
             if (!File.Exists(this.PhysicalPath))
@@ -110,25 +110,25 @@ namespace ffxv_earc {
             //* 3.) The data is not compressed or encrypted -- write it out
             //*     3b.) The data has a size of zero, create the file but write nothing
 
-            //* if the file is neither compressed or encrypted, the compressed size should equal the size
-            byte[] fileData = ReadEntryDataToArray(reader, (long)entry.OffsetData, (int)entry.CompressedSize);
-
             //* start with decryption
             if ((entry.Flags & XvEntryHeaderFlags.Encrypted) == XvEntryHeaderFlags.Encrypted)
-                return this.DecryptEntryDataToArray(entry, fileData);
+                return this.DecryptEntryDataToArray(entry, ReadEntryDataToArray(reader, (long)entry.OffsetData, (int)entry.CompressedSize));
             else if ((entry.Flags & XvEntryHeaderFlags.Compressed) == XvEntryHeaderFlags.Compressed)
-                return this.DecompressEntryDataToArray(entry, fileData);
+                return this.DecompressEntryDataToArray(entry, ReadEntryDataToArray(reader, (long)entry.OffsetData, (int)entry.CompressedSize));
             else {
-                return null;
+                if (entry.Size == 0)
+                    return new byte[1] { 0 };
+
+                return ReadEntryDataToArray(reader, (long)entry.OffsetData, (int)entry.Size);
             }
         }
 
         /// <summary>
-        /// 
+        /// Decrypts an <see cref="XvEntryHeader"/>'s data into a byte array.
         /// </summary>
-        /// <param name="entry"></param>
-        /// <param name="encryptedData"></param>
-        /// <returns></returns>
+        /// <param name="entry">The <see cref="XvEntryHeader"/> to decrypt.</param>
+        /// <param name="encryptedData">The data to decrypt.</param>
+        /// <returns>A byte array of decrypted data.</returns>
         private byte[] DecryptEntryDataToArray(XvEntryHeader entry, byte[] encryptedData) {
             Aes aes = Aes.Create();
 
@@ -153,11 +153,11 @@ namespace ffxv_earc {
         }
 
         /// <summary>
-        /// 
+        /// Decompresses an <see cref="XvEntryHeader"/>'s data into a byte array.
         /// </summary>
-        /// <param name="entry"></param>
-        /// <param name="compressedData"></param>
-        /// <returns></returns>
+        /// <param name="entry">The <see cref="XvEntryHeader"/> to decompress.</param>
+        /// <param name="compressedData">The data to decompress.</param>
+        /// <returns>A byte array of decompressed data.</returns>
         private byte[] DecompressEntryDataToArray(XvEntryHeader entry, byte[] compressedData) {
             //* get the number of chunks we have
             uint chunkSize  = this.p_ArchiveHeader.ChunkSize * 1024;
@@ -212,12 +212,12 @@ namespace ffxv_earc {
         }
 
         /// <summary>
-        /// 
+        /// Gets the binary data of an <see cref="XvEntryHeader"/> as stored in the <see cref="XvArchive"/>.
         /// </summary>
-        /// <param name="reader"></param>
-        /// <param name="position"></param>
-        /// <param name="size"></param>
-        /// <returns></returns>
+        /// <param name="reader">The <see cref="BinaryReader"/> attached to the <see cref="Stream"/> of the <see cref="XvArchive"/>.</param>
+        /// <param name="position">The starting position of the data within the <see cref="XvArchive"/></param>
+        /// <param name="size">The size of the data to read.</param>
+        /// <returns>A byte array containing the unmodified data of an <see cref="XvEntryHeader"/>.</returns>
         private static byte[] ReadEntryDataToArray(BinaryReader reader, long position, int size) {
             reader.BaseStream.Seek(position, SeekOrigin.Begin);
 
@@ -225,9 +225,9 @@ namespace ffxv_earc {
         }
 
         /// <summary>
-        /// Opens and reads the archive information at the specified file path and stores it in a new <see cref="XvArchive"/>.
+        /// Opens and reads the file information at the specified file path and stores it in a new <see cref="XvArchive"/>.
         /// </summary>
-        /// <param name="filePath">Physical location of archive on the hard drive.</param>
+        /// <param name="filePath">Physical location of <see cref="XvArchive"/> on the hard drive.</param>
         /// <returns>A new <see cref="XvArchive"/> of the specified archive file.</returns>
         public static XvArchive Open(string filePath) {
             if (!File.Exists(filePath))
